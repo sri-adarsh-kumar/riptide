@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.beans.factory.support.BeanDefinitionBuilder.genericBeanDefinition;
+import static org.zalando.riptide.autoconfigure.RiptideProperties.BackupRequest;
 import static org.zalando.riptide.autoconfigure.RiptideProperties.Client;
 import static org.zalando.riptide.autoconfigure.RiptideProperties.Failsafe;
 import static org.zalando.riptide.autoconfigure.RiptideProperties.Retry;
@@ -37,6 +38,18 @@ final class DefaultRiptideRegistrarTest {
         final DefaultListableBeanFactory registry = register(properties);
 
         assertTrue(registry.containsBeanDefinition("exampleFailsafeExecutorService"));
+    }
+
+    @Test
+    void shouldRegisterFailsafePluginForBackupRequest() {
+        final RiptideProperties properties = new RiptideProperties();
+        final Client client = new Client();
+        client.setBackupRequest(backupRequest());
+        properties.getClients().put("example", client);
+
+        final DefaultListableBeanFactory registry = register(properties);
+
+        assertTrue(registry.containsBeanDefinition("exampleFailsafePlugin"));
     }
 
     @Test
@@ -146,6 +159,12 @@ final class DefaultRiptideRegistrarTest {
         final Retry retry = new Retry();
         retry.setEnabled(true);
         return retry;
+    }
+
+    private static BackupRequest backupRequest() {
+        final BackupRequest backupRequest = new BackupRequest();
+        backupRequest.setEnabled(true);
+        return backupRequest;
     }
 
     private static Timeouts timeouts(final Threads threads) {

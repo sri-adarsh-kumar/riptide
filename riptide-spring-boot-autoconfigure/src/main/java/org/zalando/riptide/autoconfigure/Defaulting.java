@@ -101,19 +101,17 @@ final class Defaulting {
 
         final int maxTotal = connections.getMaxTotal();
 
-        final Integer explicitThreadMaxSize = either(
+        final int explicitThreadMaxSize = requireNonNull(either(
                 base.getThreads() == null ? null : base.getThreads().getMaxSize(),
-                defaults.getThreads().getMaxSize());
+                defaults.getThreads().getMaxSize())).intValue();
 
-        if (explicitThreadMaxSize != null && maxTotal > explicitThreadMaxSize) {
+        if (maxTotal > explicitThreadMaxSize) {
             log.warn("[{}]: threads.max-size ({}) is lower than connections.max-total ({}). " +
                     "Effective max-size will be raised to {}.",
                     clientId, explicitThreadMaxSize, maxTotal, maxTotal);
         }
 
-        final Integer threadMaxSize = explicitThreadMaxSize != null
-                ? max(explicitThreadMaxSize, maxTotal)
-                : maxTotal;
+        final int threadMaxSize = max(explicitThreadMaxSize, maxTotal);
 
         final Auth pick = pick(
                 merge(base.getAuth(), defaults.getAuth(), Defaulting::merge),

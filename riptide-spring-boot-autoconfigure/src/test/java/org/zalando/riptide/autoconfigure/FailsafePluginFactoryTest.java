@@ -1,6 +1,8 @@
 package org.zalando.riptide.autoconfigure;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.client.ClientHttpResponse;
 import org.zalando.riptide.RequestArguments;
@@ -18,6 +20,7 @@ import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 final class FailsafePluginFactoryTest {
 
@@ -68,7 +71,10 @@ final class FailsafePluginFactoryTest {
 
     private static RetryException retryException() {
         try {
-            return new RetryException(mock(ClientHttpResponse.class));
+            final ClientHttpResponse response = mock(ClientHttpResponse.class);
+            when(response.getStatusCode()).thenReturn(HttpStatus.SERVICE_UNAVAILABLE);
+            when(response.getHeaders()).thenReturn(new HttpHeaders());
+            return new RetryException(response);
         } catch (final IOException e) {
             throw new AssertionError(e);
         }

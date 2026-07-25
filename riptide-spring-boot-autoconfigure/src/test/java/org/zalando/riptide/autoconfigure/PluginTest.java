@@ -105,12 +105,12 @@ final class PluginTest {
                 .orElseThrow();
 
         assertThat(getPolicies(failsafePlugin), contains(
-                dev.failsafe.Timeout.class,
-                org.zalando.riptide.failsafe.BackupRequest.class,
-                dev.failsafe.RetryPolicy.class,
-                dev.failsafe.RetryPolicy.class,
-                dev.failsafe.RetryPolicy.class,
-                dev.failsafe.CircuitBreaker.class));
+                instanceOf(dev.failsafe.Timeout.class),
+                instanceOf(org.zalando.riptide.failsafe.BackupRequest.class),
+                instanceOf(dev.failsafe.RetryPolicy.class),
+                instanceOf(dev.failsafe.RetryPolicy.class),
+                instanceOf(dev.failsafe.RetryPolicy.class),
+                instanceOf(dev.failsafe.CircuitBreaker.class)));
     }
 
     @Test
@@ -145,17 +145,17 @@ final class PluginTest {
     }
 
     @SuppressWarnings("unchecked")
-    private List<Class<?>> getPolicies(final FailsafePlugin plugin) throws Exception {
+    private List<Object> getPolicies(final FailsafePlugin plugin) throws Exception {
         final Field field = FailsafePlugin.class.getDeclaredField("policies");
         field.setAccessible(true);
 
         final Iterable<org.zalando.riptide.failsafe.RequestPolicy> policies =
                 (Iterable<org.zalando.riptide.failsafe.RequestPolicy>) field.get(plugin);
-        final List<Class<?>> classes = new ArrayList<>();
+        final List<Object> preparedPolicies = new ArrayList<>();
         for (final org.zalando.riptide.failsafe.RequestPolicy policy : policies) {
-            classes.add(policy.prepare(mock(org.zalando.riptide.RequestArguments.class)).getClass());
+            preparedPolicies.add(policy.prepare(mock(org.zalando.riptide.RequestArguments.class)));
         }
-        return classes;
+        return preparedPolicies;
     }
 
 }
