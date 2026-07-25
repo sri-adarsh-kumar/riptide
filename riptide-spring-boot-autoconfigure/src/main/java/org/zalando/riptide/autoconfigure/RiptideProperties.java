@@ -109,6 +109,9 @@ public final class RiptideProperties {
         private Timeouts timeouts = new Timeouts(false, null, null);
 
         @NestedConfigurationProperty
+        private Failsafe failsafe = new Failsafe();
+
+        @NestedConfigurationProperty
         private RequestCompression requestCompression = new RequestCompression(false);
 
         @NestedConfigurationProperty
@@ -195,6 +198,9 @@ public final class RiptideProperties {
 
         @NestedConfigurationProperty
         private Timeouts timeouts;
+
+        @NestedConfigurationProperty
+        private Failsafe failsafe;
 
         @NestedConfigurationProperty
         private RequestCompression requestCompression;
@@ -350,6 +356,14 @@ public final class RiptideProperties {
     public static final class Timeouts {
         private Boolean enabled;
         private TimeSpan global;
+        private Threads threads;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static final class Failsafe {
         private Threads threads;
     }
 

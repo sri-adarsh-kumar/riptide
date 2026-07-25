@@ -23,27 +23,22 @@ riptide.clients:
       socket-timeout: 100 milliseconds
       time-to-live: 30 seconds
       max-per-route: 16
-    retry:
-      enabled: true
-      fixed-delay: 50 milliseconds
-      max-retries: 5
+    failsafe:
       threads:
         max-size: 10
         min-size: 2
         enabled: true
         keep-alive: 5 minutes
         queue-size: 10
+    retry:
+      enabled: true
+      fixed-delay: 50 milliseconds
+      max-retries: 5
     circuit-breaker:
       enabled: true
       failure-threshold: 3 out of 5
       delay: 30 seconds
       success-threshold: 5 out of 5
-      threads:
-        max-size: 10
-        min-size: 2
-        enabled: true
-        keep-alive: 5 minutes
-        queue-size: 10
     caching:
       enabled: true
       shared: false
@@ -292,48 +287,31 @@ riptide:
         enabled: true
       transient-fault-detection.enabled: true
       stack-trace-preservation.enabled: true
+      failsafe:
+        threads:
+          max-size: 10
+          min-size: 2
+          enabled: true
+          keep-alive: 5 minutes
+          queue-size: 10
       retry:
         enabled: true
         fixed-delay: 50 milliseconds
         max-retries: 5
         max-duration: 2 seconds
         jitter: 25 milliseconds
-        threads:
-          max-size: 10
-          min-size: 2
-          enabled: true
-          keep-alive: 5 minutes
-          queue-size: 10
       circuit-breaker:
         enabled: true
         failure-threshold: 3 out of 5
         failure-rate-threshold: 3 out of 5 in 5 seconds
         delay: 30 seconds
         success-threshold: 5 out of 5
-        threads:
-          max-size: 10
-          min-size: 2
-          enabled: true
-          keep-alive: 5 minutes
-          queue-size: 10
       backup-request:
         enabled: true
         delay: 75 milliseconds
-        threads:
-          max-size: 10
-          min-size: 2
-          enabled: true
-          keep-alive: 5 minutes
-          queue-size: 10
       timeouts:
         enabled: true
         global: 500 milliseconds
-        threads:
-          max-size: 10
-          min-size: 2
-          enabled: true
-          keep-alive: 5 minutes
-          queue-size: 10
       caching:
         enabled: true
         shared: true
@@ -446,6 +424,8 @@ For a complete overview of available properties, they type and default value ple
 | `│   │   ├── max-size`                  | `int`             | same as `connections.max-total`; a warning is logged if the configured value is lower                                                                                                                         |
 | `│   │   ├── keep-alive`                | `TimeSpan`        | `1 minute`                                                                                                                                                                                                    |
 | `│   │   └── queue-size`                | `int`             | `0` (no queue)                                                                                                                                                                                                |
+| `│   ├── failsafe`                      |                   | shared executor for enabled Failsafe policies                                                                                                                                                                 |
+| `│   │   └── threads`                   |                   | see `threads`; unset by default                                                                                                                                                                               |
 | `│   ├── timeouts`                      |                   | adds `Failsafe` [Timeout policy](../riptide-failsafe#timeout-policy), can be used in addition to `connections` properties to control the entire duration: from sending the request to processing the response |
 | `│   │   ├── enabled`                   | `boolean`         | `false`                                                                                                                                                                                                       |
 | `│   │   └── global`                    | `TimeSpan`        | none                                                                                                                                                                                                          |
@@ -531,6 +511,8 @@ For a complete overview of available properties, they type and default value ple
 | `        ├── telemetry`                 |                   |                                                                                                                                                                                                               |
 | `        │   ├── enabled`               | `boolean`         | see `defaults`                                                                                                                                                                                                |
 | `        │   ├── attributes`            | `Map`             | see `defaults`                                                                                                                                                                                                |
+| `        ├── failsafe`                  |                   |                                                                                                                                                                                                               |
+| `        │   └── threads`               |                   | see `defaults`; shared executor for enabled Failsafe policies                                                                                                                                                |
 | `        ├── threads`                   |                   |                                                                                                                                                                                                               |
 | `        │   ├── enabled`               | `boolean`         | see `defaults`                                                                                                                                                                                                |
 | `        │   ├── min-size`              | `int`             | see `defaults`                                                                                                                                                                                                |
@@ -664,59 +646,33 @@ The following table shows all beans with their respective name (for the `example
 | `exampleFaultClassifier`               | `FaultClassifier`                             |
 | `exampleCircuitBreakerListener`        | `CircuitBreakerListener`                      |
 | `exampleAuthorizationProvider`         | `AuthorizationProvider`                       |
-| `exampleRetryPolicyExecutorService`    | `ExecutorService`                             |
-| `exampleCircuitBreakerExecutorService` | `ExecutorService`                             |
-| `exampleBackupRequestExecutorService`  | `ExecutorService`                             |
-| `exampleTimeoutExecutorService`        | `ExecutorService`                             |
+| `exampleFailsafeExecutorService`       | `ExecutorService`                             |
 
 If you override a bean then all of its dependencies (see the [graph](#customization)), will **not** be registered,
 unless required by some other bean.
 
-Riptide uses Failsafe underneath to manage resiliency flows, and Failsafe supports custom thread pool executors. For more details, refer to the [riptide-failsafe](https://github.com/zalando/riptide/tree/main/riptide-failsafe#custom-executor) documentation. To configure a custom thread pool executor for retry, circuit breaker, backup requests, and timeout features, follow the configuration steps below.
+Riptide combines enabled timeout, backup-request, retry, and circuit-breaker policies into one Failsafe chain. Configure one custom executor for that chain with `failsafe.threads`:
 ```yaml
-      retry:
+    failsafe:
+      threads:
+        max-size: 10
+        min-size: 2
         enabled: true
-        fixed-delay: 50 milliseconds
-        max-retries: 5
-        max-duration: 2 seconds
-        jitter: 25 milliseconds
-        threads:
-          max-size: 10
-          min-size: 2
-          enabled: true
-          keep-alive: 5 minutes
-          queue-size: 10
-      circuit-breaker:
-        enabled: true
-        failure-threshold: 3 out of 5
-        failure-rate-threshold: 3 out of 5 in 5 seconds
-        delay: 30 seconds
-        success-threshold: 5 out of 5
-        threads:
-          max-size: 10
-          min-size: 2
-          enabled: true
-          keep-alive: 5 minutes
-          queue-size: 10
-      backup-request:
-        enabled: true
-        delay: 75 milliseconds
-        threads:
-          max-size: 10
-          min-size: 2
-          enabled: true
-          keep-alive: 5 minutes
-          queue-size: 10
-      timeouts:
-        enabled: true
-        global: 500 milliseconds
-        threads:
-          max-size: 10
-          min-size: 2
-          enabled: true
-          keep-alive: 5 minutes
-          queue-size: 10
+        keep-alive: 5 minutes
+        queue-size: 10
+    retry:
+      enabled: true
+      fixed-delay: 50 milliseconds
+      max-retries: 5
+    circuit-breaker:
+      enabled: true
+      failure-threshold: 3 out of 5
+    timeouts:
+      enabled: true
+      global: 500 milliseconds
 ```
+
+The new executor bean is named `exampleFailsafeExecutorService`. Legacy policy-specific `retry.threads`, `circuit-breaker.threads`, `backup-request.threads`, and `timeouts.threads` settings remain a temporary fallback only when exactly one enabled policy uses one of them; this logs a deprecation warning. Startup fails when more than one legacy executor is enabled, or when a legacy executor is combined with `failsafe.threads`.
 
 In case you need more than one custom plugin, please use `Plugin.composite(Plugin...)`.
 

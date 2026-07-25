@@ -1,0 +1,13 @@
+riptide:
+  clients:
+    legacy:
+      base-url: http://legacy
+      retry:
+        enabled: true
+        max-retries: 1
+        threads:
+          enabled: true
+          min-size: 2
+          max-size: 4
+          keep-alive: 1 minute
+          queue-size: 0

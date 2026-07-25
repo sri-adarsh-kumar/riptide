@@ -13,10 +13,13 @@ and a circuit breaker to every remote call.
 ```java
 Http.builder().requestFactory(new HttpComponentsClientHttpRequestFactory())
     .plugin(new FailsafePlugin()
-        .withPolicy(circuitBreaker)
-        .withPolicy(new RetryRequestPolicy(retryPolicy)))
+        .withPolicy(Timeout.of(Duration.ofSeconds(2)))
+        .withPolicy(new RetryRequestPolicy(retryPolicy))
+        .withPolicy(circuitBreaker))
     .build();
 ```
+
+Policies added to one `FailsafePlugin` form one Failsafe execution. In particular, add a timeout before a retry policy when the timeout must cover the complete retry operation. Separate `FailsafePlugin` instances intentionally create independent executions.
 
 ## Features
 

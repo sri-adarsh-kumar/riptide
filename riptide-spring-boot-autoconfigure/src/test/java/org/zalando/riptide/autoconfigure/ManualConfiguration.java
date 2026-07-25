@@ -144,6 +144,14 @@ public class ManualConfiguration {
                     new LogbookPlugin(logbook),
                     new OpenTracingPlugin(tracer),
                     new FailsafePlugin()
+                            .withPolicy(Timeout.of(Duration.ofSeconds(3)))
+                            .withPolicy(new BackupRequest<>(10, MILLISECONDS))
+                            .withPolicy(new RetryRequestPolicy(
+                                    retryPolicy(transientSocketFaults()))
+                                    .withPredicate(new IdempotencyPredicate()))
+                            .withPolicy(new RetryRequestPolicy(
+                                    retryPolicy(transientConnectionFaults()))
+                                    .withPredicate(alwaysTrue()))
                             .withPolicy(CircuitBreaker.<ClientHttpResponse>builder()
                                     .withFailureThreshold(5, 5)
                                     .withDelay(Duration.ofSeconds(30))
@@ -157,19 +165,7 @@ public class ManualConfiguration {
                                     .onClose(event -> listener.onClose())
                                     .build())
                             .withDecorator(new TracedTaskDecorator(tracer)),
-                    new FailsafePlugin().withPolicy(
-                            new RetryRequestPolicy(
-                                    retryPolicy(transientSocketFaults()))
-                                    .withPredicate(new IdempotencyPredicate())),
-                    new FailsafePlugin().withPolicy(
-                            new RetryRequestPolicy(
-                                    retryPolicy(transientConnectionFaults()))
-                                    .withPredicate(alwaysTrue())),
                     new AuthorizationPlugin(new PlatformCredentialsAuthorizationProvider("example")),
-                    new FailsafePlugin()
-                            .withPolicy(new BackupRequest<>(10, MILLISECONDS)),
-                    new FailsafePlugin()
-                            .withPolicy(Timeout.of(Duration.ofSeconds(3))),
                     new OriginalStackTracePlugin(),
                     new CustomPlugin());
         }

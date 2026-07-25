@@ -14,6 +14,7 @@ import org.zalando.riptide.autoconfigure.RiptideProperties.Chaos.Exceptions;
 import org.zalando.riptide.autoconfigure.RiptideProperties.Chaos.Latency;
 import org.zalando.riptide.autoconfigure.RiptideProperties.Connections;
 import org.zalando.riptide.autoconfigure.RiptideProperties.Logging;
+import org.zalando.riptide.autoconfigure.RiptideProperties.Failsafe;
 import org.zalando.riptide.autoconfigure.RiptideProperties.Metrics;
 import org.zalando.riptide.autoconfigure.RiptideProperties.RequestCompression;
 import org.zalando.riptide.autoconfigure.RiptideProperties.Retry.Backoff;
@@ -74,6 +75,7 @@ final class Defaulting {
                 defaults.getCircuitBreaker(),
                 defaults.getBackupRequest(),
                 defaults.getTimeouts(),
+                defaults.getFailsafe(),
                 defaults.getRequestCompression(),
                 defaults.getCertificatePinning(),
                 defaults.getCaching(),
@@ -134,6 +136,7 @@ final class Defaulting {
                 merge(base.getCircuitBreaker(), defaults.getCircuitBreaker(), Defaulting::merge),
                 merge(base.getBackupRequest(), defaults.getBackupRequest(), Defaulting::merge),
                 merge(base.getTimeouts(), defaults.getTimeouts(), Defaulting::merge),
+                merge(base.getFailsafe(), defaults.getFailsafe(), Defaulting::merge),
                 merge(base.getRequestCompression(), defaults.getRequestCompression(), Defaulting::merge),
                 merge(base.getCertificatePinning(), defaults.getCertificatePinning(), Defaulting::merge),
                 merge(base.getCaching(), defaults.getCaching(), Defaulting::merge),
@@ -271,6 +274,10 @@ final class Defaulting {
                 either(base.getGlobal(), defaults.getGlobal()),
                 either(base.getThreads(), defaults.getThreads())
         );
+    }
+
+    private static Failsafe merge(final Failsafe base, final Failsafe defaults) {
+        return new Failsafe(either(base.getThreads(), defaults.getThreads()));
     }
 
     private static RequestCompression merge(final RequestCompression base, final RequestCompression defaults) {

@@ -58,6 +58,10 @@ public class FailsafeRetryTest {
     private Http retryClient;
 
     @Autowired
+    @Qualifier("retry-timeout-test")
+    private Http retryTimeoutClient;
+
+    @Autowired
     private MockRestServiceServer server;
 
     @Test
@@ -97,6 +101,16 @@ public class FailsafeRetryTest {
                                     on(HttpStatus.TOO_MANY_REQUESTS).call(retry())))
                     .join());
         });
+
+        server.verify();
+    }
+
+    @Test
+    void shouldApplyGlobalTimeoutAroundRetries() {
+        server.expect(times(1), requestTo("http://retry-timeout-test")).andRespond(withServerError());
+
+        assertTimeout(Duration.ofSeconds(1), () -> assertThrows(CompletionException.class,
+                () -> retryTimeoutClient.get().dispatch(series(), on(SERVER_ERROR).call(retry())).join()));
 
         server.verify();
     }

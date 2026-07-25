@@ -22,7 +22,8 @@ public class RiptideTestAutoConfiguration {
 
     @Bean
     public static RiptidePostProcessor restClientTestPostProcessor() {
-        return new RiptidePostProcessor(TestRiptideRegistrar::new);
+        return new RiptidePostProcessor((registry, rawProperties, properties) ->
+                new TestRiptideRegistrar(registry, properties));
     }
 
     @Configuration

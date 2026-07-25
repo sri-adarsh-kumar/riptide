@@ -19,6 +19,7 @@ import org.zalando.riptide.opentelemetry.OpenTelemetryPlugin;
 import org.zalando.riptide.opentracing.OpenTracingPlugin;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.Arrays.asList;
@@ -26,6 +27,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.mockito.Mockito.mock;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE;
 
 @SpringBootTest(classes = PluginTest.TestConfiguration.class, webEnvironment = NONE)
@@ -70,6 +72,10 @@ final class PluginTest {
     @Qualifier("example")
     private Http example;
 
+    @Autowired
+    @Qualifier("custom-executor-test")
+    private Http customExecutorTest;
+
     @Test
     void shouldUseFailsafePlugin() throws Exception {
         assertThat(getPlugins(foo), contains(asList(
@@ -88,8 +94,23 @@ final class PluginTest {
                 instanceOf(Plugin.class), // internal plugin
                 instanceOf(Plugin.class), // internal plugin
                 instanceOf(MicrometerPlugin.class),
-                instanceOf(FailsafePlugin.class), // backup requests
-                instanceOf(FailsafePlugin.class)))); // timeouts
+                instanceOf(FailsafePlugin.class))));
+    }
+
+    @Test
+    void shouldChainAllEnabledFailsafePoliciesInOnePlugin() throws Exception {
+        final FailsafePlugin failsafePlugin = (FailsafePlugin) getPlugins(customExecutorTest).stream()
+                .filter(FailsafePlugin.class::isInstance)
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(getPolicies(failsafePlugin), contains(
+                dev.failsafe.Timeout.class,
+                org.zalando.riptide.failsafe.BackupRequest.class,
+                dev.failsafe.RetryPolicy.class,
+                dev.failsafe.RetryPolicy.class,
+                dev.failsafe.RetryPolicy.class,
+                dev.failsafe.CircuitBreaker.class));
     }
 
     @Test
@@ -121,6 +142,20 @@ final class PluginTest {
         @SuppressWarnings("unchecked") final List<Plugin> list = (List<Plugin>) plugins.get(plugin);
 
         return list;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Class<?>> getPolicies(final FailsafePlugin plugin) throws Exception {
+        final Field field = FailsafePlugin.class.getDeclaredField("policies");
+        field.setAccessible(true);
+
+        final Iterable<org.zalando.riptide.failsafe.RequestPolicy> policies =
+                (Iterable<org.zalando.riptide.failsafe.RequestPolicy>) field.get(plugin);
+        final List<Class<?>> classes = new ArrayList<>();
+        for (final org.zalando.riptide.failsafe.RequestPolicy policy : policies) {
+            classes.add(policy.prepare(mock(org.zalando.riptide.RequestArguments.class)).getClass());
+        }
+        return classes;
     }
 
 }

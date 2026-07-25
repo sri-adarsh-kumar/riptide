@@ -7,6 +7,14 @@
 
 ## Spring Framework 7 / Spring Boot 4
 
+### Failsafe Executor Migration
+
+Spring Boot auto-configuration now combines all enabled timeout, backup-request, retry, and circuit-breaker policies for a client into one Failsafe chain. Configure its optional custom executor once with `riptide.defaults.failsafe.threads` or `riptide.clients.<id>.failsafe.threads`.
+
+The policy-specific `retry.threads`, `circuit-breaker.threads`, `backup-request.threads`, and `timeouts.threads` settings are deprecated. A single enabled legacy setting remains a temporary fallback and logs a warning. Startup fails when multiple legacy executors are enabled, or when a legacy executor is combined with `failsafe.threads`.
+
+The policy-specific executor bean names (`<id>RetryPolicyExecutorService`, `<id>CircuitBreakerExecutorService`, `<id>BackupRequestExecutorService`, and `<id>TimeoutExecutorService`) are replaced by `<id>FailsafeExecutorService`.
+
 Riptide 5.0 migrates to Spring Framework 7 and Spring Boot 4 including several breaking changes that affect Riptide users.
 
 ### Jackson 3.x Migration

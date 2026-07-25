@@ -5,6 +5,7 @@ import org.zalando.riptide.autoconfigure.RiptideProperties.Caching.Heuristic;
 import org.zalando.riptide.autoconfigure.RiptideProperties.Client;
 import org.zalando.riptide.autoconfigure.RiptideProperties.Connections;
 import org.zalando.riptide.autoconfigure.RiptideProperties.Defaults;
+import org.zalando.riptide.autoconfigure.RiptideProperties.Failsafe;
 import org.zalando.riptide.autoconfigure.RiptideProperties.Threads;
 
 import java.nio.file.Paths;
@@ -172,6 +173,32 @@ final class DefaultingTest {
         assertThat(actual.getHeuristic().getEnabled(), is(false));
         assertThat(actual.getHeuristic().getCoefficient(), is(0.1f));
         assertThat(actual.getHeuristic().getDefaultLifeTime(), hasToString("1 hours"));
+    }
+
+    @Test
+    void shouldLeaveFailsafeThreadsUnsetWithoutConfiguration() {
+        final RiptideProperties properties = new RiptideProperties();
+        properties.getClients().put("example", new Client());
+
+        final RiptideProperties actual = Defaulting.withDefaults(properties);
+
+        assertThat(actual.getClients().get("example").getFailsafe().getThreads(), is((Threads) null));
+    }
+
+    @Test
+    void shouldInheritAndOverrideFailsafeThreads() {
+        final RiptideProperties properties = new RiptideProperties();
+        properties.getDefaults().getFailsafe().setThreads(new Threads(true, 2, 4, null, 1));
+        final Client inherited = new Client();
+        final Client overridden = new Client();
+        overridden.setFailsafe(new Failsafe(new Threads(true, 3, 6, null, 2)));
+        properties.getClients().put("inherited", inherited);
+        properties.getClients().put("overridden", overridden);
+
+        final RiptideProperties actual = Defaulting.withDefaults(properties);
+
+        assertThat(actual.getClients().get("inherited").getFailsafe().getThreads().getMaxSize(), is(4));
+        assertThat(actual.getClients().get("overridden").getFailsafe().getThreads().getMaxSize(), is(6));
     }
 
 }

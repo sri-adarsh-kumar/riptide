@@ -11,16 +11,15 @@ import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 
-import java.util.function.BiFunction;
-
 import static org.springframework.boot.context.properties.source.ConfigurationPropertySources.from;
 
 final class RiptidePostProcessor implements BeanDefinitionRegistryPostProcessor, EnvironmentAware {
 
     private RiptideProperties properties;
-    private BiFunction<Registry, RiptideProperties, RiptideRegistrar> registrarFactory;
+    private RiptideProperties rawProperties;
+    private RiptideRegistrarFactory registrarFactory;
 
-    RiptidePostProcessor(final BiFunction<Registry, RiptideProperties, RiptideRegistrar> registrarFactory) {
+    RiptidePostProcessor(final RiptideRegistrarFactory registrarFactory) {
         this.registrarFactory = registrarFactory;
     }
 
@@ -31,12 +30,13 @@ final class RiptidePostProcessor implements BeanDefinitionRegistryPostProcessor,
         final Binder binder = new Binder(sources,
                 new PropertySourcesPlaceholdersResolver(environment));
 
-        this.properties = Defaulting.withDefaults(binder.bindOrCreate("riptide", RiptideProperties.class));
+        this.rawProperties = binder.bindOrCreate("riptide", RiptideProperties.class);
+        this.properties = Defaulting.withDefaults(rawProperties);
     }
 
     @Override
     public void postProcessBeanDefinitionRegistry(final BeanDefinitionRegistry registry) {
-        final RiptideRegistrar registrar = registrarFactory.apply(new Registry(registry), properties);
+        final RiptideRegistrar registrar = registrarFactory.create(new Registry(registry), rawProperties, properties);
         registrar.register();
     }
 
