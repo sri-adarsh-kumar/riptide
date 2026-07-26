@@ -26,6 +26,7 @@ import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.mockito.Mockito.mock;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE;
@@ -78,6 +79,7 @@ final class PluginTest {
 
     @Test
     void shouldUseFailsafePlugin() throws Exception {
+        assertThat(getFailsafePlugins(foo), hasSize(1));
         assertThat(getPlugins(foo), contains(asList(
                 instanceOf(Plugin.class), // internal plugin
                 instanceOf(Plugin.class), // internal plugin
@@ -89,6 +91,7 @@ final class PluginTest {
 
     @Test
     void shouldUseBackupRequestPlugin() throws Exception {
+        assertThat(getFailsafePlugins(baz), hasSize(1));
         assertThat(getPlugins(baz), contains(asList(
                 instanceOf(Plugin.class), // internal plugin
                 instanceOf(Plugin.class), // internal plugin
@@ -99,10 +102,10 @@ final class PluginTest {
 
     @Test
     void shouldChainAllEnabledFailsafePoliciesInOnePlugin() throws Exception {
-        final FailsafePlugin failsafePlugin = (FailsafePlugin) getPlugins(customExecutorTest).stream()
-                .filter(FailsafePlugin.class::isInstance)
-                .findFirst()
-                .orElseThrow();
+        final List<FailsafePlugin> failsafePlugins = getFailsafePlugins(customExecutorTest);
+        assertThat(failsafePlugins, hasSize(1));
+
+        final FailsafePlugin failsafePlugin = failsafePlugins.get(0);
 
         assertThat(getPolicies(failsafePlugin), contains(
                 instanceOf(dev.failsafe.Timeout.class),
@@ -142,6 +145,13 @@ final class PluginTest {
         @SuppressWarnings("unchecked") final List<Plugin> list = (List<Plugin>) plugins.get(plugin);
 
         return list;
+    }
+
+    private List<FailsafePlugin> getFailsafePlugins(final Http http) throws Exception {
+        return getPlugins(http).stream()
+                .filter(FailsafePlugin.class::isInstance)
+                .map(FailsafePlugin.class::cast)
+                .toList();
     }
 
     @SuppressWarnings("unchecked")

@@ -11,7 +11,7 @@
 
 Spring Boot auto-configuration now combines all enabled timeout, backup-request, retry, and circuit-breaker policies for a client into one Failsafe chain. Configure its optional custom executor once with `riptide.defaults.failsafe.threads` or `riptide.clients.<id>.failsafe.threads`.
 
-The policy-specific `retry.threads`, `circuit-breaker.threads`, `backup-request.threads`, and `timeouts.threads` settings are deprecated. A single enabled legacy setting remains a temporary fallback and logs a warning. Startup fails when multiple legacy executors are enabled, or when a legacy executor is combined with `failsafe.threads`.
+Policy-specific `retry.threads`, `circuit-breaker.threads`, `backup-request.threads`, and `timeouts.threads` settings are no longer supported. Replace every active policy-specific executor setting with `failsafe.threads` before upgrading. Active legacy settings fail startup with an actionable migration error; there is no fallback or deprecation warning.
 
 The policy-specific executor bean names (`<id>RetryPolicyExecutorService`, `<id>CircuitBreakerExecutorService`, `<id>BackupRequestExecutorService`, and `<id>TimeoutExecutorService`) are replaced by `<id>FailsafeExecutorService`.
 

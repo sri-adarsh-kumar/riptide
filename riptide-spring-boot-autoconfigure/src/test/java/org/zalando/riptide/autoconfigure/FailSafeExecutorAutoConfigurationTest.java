@@ -91,7 +91,7 @@ public class FailSafeExecutorAutoConfigurationTest {
         }
 
         assertThat(terminalThread.get())
-                .startsWith("http-custom-executor-test-");
+                .startsWith("http-custom-executor-test-failsafe-");
         server.verify();
     }
 

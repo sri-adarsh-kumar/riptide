@@ -111,7 +111,7 @@ public class HttpClientFactorySslBundleTest {
     props.setClients(Map.of("ssl-bundle-test", client));
 
     DefaultRiptideRegistrar registrar = new DefaultRiptideRegistrar(
-        new Registry(new SimpleBeanDefinitionRegistry()), props, props
+        new Registry(new SimpleBeanDefinitionRegistry()), Defaulting.withDefaults(props)
     );
 
     final SslBundleUsageOrCertificatePinningException ex = assertThrows(

@@ -88,12 +88,12 @@ import static org.zalando.riptide.autoconfigure.ValueConstants.TRACER_REF;
 final class DefaultRiptideRegistrar implements RiptideRegistrar {
 
     private final Registry registry;
-    private final RiptideProperties rawProperties;
     private final RiptideProperties properties;
 
     @Override
     public void register() {
         properties.getClients().forEach((id, client) -> {
+            validateLegacyFailsafeThreads(client);
             registerHttp(id, client);
             registerHttpOperations(id, client);
         });
@@ -411,8 +411,7 @@ final class DefaultRiptideRegistrar implements RiptideRegistrar {
 
         final String pluginId = registry.registerIfAbsent(id, FailsafePlugin.class, () -> {
             log.debug("Client [{}]: Registering [FailsafePlugin]", id);
-            final Client rawClient = rawProperties.getClients().getOrDefault(id, new Client());
-            final RiptideProperties.Threads threads = resolveFailsafeThreads(id, rawClient, client);
+            final RiptideProperties.Threads threads = resolveFailsafeThreads(client);
             final Object executor = createExecutor(id + "-failsafe", "failsafe.executor", client, threads);
             final BeanMetadataElement circuitBreaker = client.getCircuitBreaker().getEnabled()
                     ? registerCircuitBreaker(id, client) : null;
@@ -432,56 +431,30 @@ final class DefaultRiptideRegistrar implements RiptideRegistrar {
     }
 
     @Nullable
-    private RiptideProperties.Threads resolveFailsafeThreads(final String id, final Client raw,
-            final Client effective) {
-        final RiptideProperties.Threads shared = effective.getFailsafe().getThreads();
-        final List<LegacyFailsafeThreads> legacy = new ArrayList<>();
-        addLegacyThreads(legacy, "retry.threads", raw.getRetry() == null ? null : raw.getRetry().getThreads(), effective.getRetry().getThreads(),
-                effective.getRetry().getEnabled());
-        addLegacyThreads(legacy, "circuit-breaker.threads", raw.getCircuitBreaker() == null ? null : raw.getCircuitBreaker().getThreads(),
-                effective.getCircuitBreaker().getThreads(), effective.getCircuitBreaker().getEnabled());
-        addLegacyThreads(legacy, "backup-request.threads", raw.getBackupRequest() == null ? null : raw.getBackupRequest().getThreads(),
-                effective.getBackupRequest().getThreads(), effective.getBackupRequest().getEnabled());
-        addLegacyThreads(legacy, "timeouts.threads", raw.getTimeouts() == null ? null : raw.getTimeouts().getThreads(),
-                effective.getTimeouts().getThreads(), effective.getTimeouts().getEnabled());
-
-        if (isEnabled(shared) && !legacy.isEmpty()) {
-            throw new IllegalArgumentException("Configure only riptide.*.failsafe.threads");
-        }
-        if (isEnabled(shared)) {
-            return shared;
-        }
-        if (legacy.size() > 1) {
-            throw new IllegalArgumentException("Multiple Failsafe executors configured");
-        }
-        if (legacy.isEmpty()) {
-            return null;
-        }
-
-        final LegacyFailsafeThreads selected = legacy.get(0);
-        final String path = selected.raw == null ? "riptide.defaults." + selected.path
-                : "riptide.clients." + id + "." + selected.path;
-        log.warn("[{}] is deprecated; configure riptide.*.failsafe.threads instead", path);
-        return selected.effective;
+    private RiptideProperties.Threads resolveFailsafeThreads(final Client client) {
+        final RiptideProperties.Threads threads = client.getFailsafe().getThreads();
+        return isEnabled(threads) ? threads : null;
     }
 
-    private void addLegacyThreads(final List<LegacyFailsafeThreads> legacy, final String path,
-            @Nullable final RiptideProperties.Threads raw, @Nullable final RiptideProperties.Threads effective,
-            final Boolean policyEnabled) {
-        if (Boolean.TRUE.equals(policyEnabled) && isEnabled(effective)) {
-            legacy.add(new LegacyFailsafeThreads(path, raw, effective));
+    private void validateLegacyFailsafeThreads(final Client client) {
+        if (!hasFailsafePolicy(client)) {
+            return;
+        }
+        if (hasEnabledLegacyFailsafeThreads(client)) {
+            throw new IllegalArgumentException("Policy-specific Failsafe executor configuration is no longer supported; "
+                    + "configure riptide.*.failsafe.threads instead");
         }
     }
 
-    private boolean isEnabled(@Nullable final RiptideProperties.Threads threads) {
+    private boolean hasEnabledLegacyFailsafeThreads(final Client client) {
+        return client.getRetry().getEnabled() && isEnabled(client.getRetry().getThreads())
+                || client.getCircuitBreaker().getEnabled() && isEnabled(client.getCircuitBreaker().getThreads())
+                || client.getBackupRequest().getEnabled() && isEnabled(client.getBackupRequest().getThreads())
+                || client.getTimeouts().getEnabled() && isEnabled(client.getTimeouts().getThreads());
+    }
+
+    private static boolean isEnabled(@Nullable final RiptideProperties.Threads threads) {
         return threads != null && Boolean.TRUE.equals(threads.getEnabled());
-    }
-
-    @AllArgsConstructor
-    private static final class LegacyFailsafeThreads {
-        private final String path;
-        @Nullable private final RiptideProperties.Threads raw;
-        private final RiptideProperties.Threads effective;
     }
 
     private Optional<String> registerAuthorizationPlugin(final String id, final Client client) {

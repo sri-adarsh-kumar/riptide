@@ -8,18 +8,14 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
 
 final class RiptidePostProcessorTest {
 
     @Test
-    void shouldPassRawAndEffectivePropertiesToRegistrarFactory() {
-        final AtomicReference<RiptideProperties> raw = new AtomicReference<>();
+    void shouldPassDefaultedPropertiesToRegistrarFactory() {
         final AtomicReference<RiptideProperties> effective = new AtomicReference<>();
-        final RiptidePostProcessor unit = new RiptidePostProcessor((registry, rawProperties,
-                effectiveProperties) -> {
-            raw.set(rawProperties);
-            effective.set(effectiveProperties);
+        final RiptidePostProcessor unit = new RiptidePostProcessor((registry, properties) -> {
+            effective.set(properties);
             return () -> { };
         });
         final MockEnvironment environment = new MockEnvironment()
@@ -29,7 +25,6 @@ final class RiptidePostProcessorTest {
         unit.setEnvironment(environment);
         unit.postProcessBeanDefinitionRegistry(new DefaultListableBeanFactory());
 
-        assertThat(raw.get().getClients().get("example").getFailsafe(), is(nullValue()));
         assertThat(effective.get().getClients().get("example").getFailsafe().getThreads().getEnabled(), is(true));
     }
 

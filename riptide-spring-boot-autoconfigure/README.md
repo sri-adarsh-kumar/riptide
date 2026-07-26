@@ -672,7 +672,7 @@ Riptide combines enabled timeout, backup-request, retry, and circuit-breaker pol
       global: 500 milliseconds
 ```
 
-The new executor bean is named `exampleFailsafeExecutorService`. Legacy policy-specific `retry.threads`, `circuit-breaker.threads`, `backup-request.threads`, and `timeouts.threads` settings remain a temporary fallback only when exactly one enabled policy uses one of them; this logs a deprecation warning. Startup fails when more than one legacy executor is enabled, or when a legacy executor is combined with `failsafe.threads`.
+The executor bean is named `exampleFailsafeExecutorService`. Policy-specific `retry.threads`, `circuit-breaker.threads`, `backup-request.threads`, and `timeouts.threads` settings are unsupported. Replace active policy-specific executor settings with `failsafe.threads` before upgrading; otherwise startup fails with a migration error.
 
 In case you need more than one custom plugin, please use `Plugin.composite(Plugin...)`.
 
